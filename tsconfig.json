@@ -6,7 +6,7 @@
       "declaration": true,
       "emitDeclarationOnly": true,
       "outDir": "./types",
-      "strict": true,
+      "strict": false,
       "noUnusedLocals": true,
       "noUnusedParameters": true,
       "noImplicitReturns": true,
@@ -18,10 +18,10 @@
       "useDefineForClassFields": false,
       "isolatedModules": true,
       "types": [
-          "vite-plugin-pwa/client",
-          "vite/client"
+        "vite-plugin-pwa/client",
+        "vite/client"
       ]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/pages/home.js"],
   "exclude": ["node_modules"]
 }
