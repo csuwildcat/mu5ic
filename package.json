@@ -1,7 +1,7 @@
 {
-  "name": "pwa-starter",
+  "name": "mu5ic",
   "version": "0.0.1",
-  "description": "A starter kit for building PWAs!",
+  "description": "A music app built with Web5 technologies",
   "main": "index.js",
   "scripts": {
     "dev-server": "vite --open",
@@ -15,8 +15,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@shoelace-style/shoelace": "^2.0.0-beta.82",
-    "@vaadin/router": "^1.7.4",
+    "@tbd54566975/web5": "0.3.1",
+    "@shoelace-style/shoelace": "2.3.0",
+    "@vaadin/router": "1.7.5",
+    "@lit-labs/router": "0.1.1",
     "lit": "^2.3.1",
     "workbox-build": "^6.5.2",
     "workbox-core": "^6.5.2",

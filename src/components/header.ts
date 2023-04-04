@@ -4,7 +4,7 @@ import { property, customElement } from 'lit/decorators.js';
 import '@shoelace-style/shoelace/dist/components/button/button.js';
 @customElement('app-header')
 export class AppHeader extends LitElement {
-  @property({ type: String }) title = 'PWA Starter';
+  @property({ type: String }) title = 'Mu5ic';
 
   @property({ type: Boolean}) enableBack: boolean = false;
 
