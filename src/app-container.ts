@@ -11,6 +11,7 @@ import './pages/explore';
 import './components/header';
 import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
+import '@shoelace-style/shoelace/dist/components/alert/alert.js';
 
 const BASE_URL: string = (import.meta.env.BASE_URL).length > 2 ? (import.meta.env.BASE_URL).slice(1, -1) : (import.meta.env.BASE_URL);
 
@@ -27,12 +28,9 @@ export class AppContainer extends LitElement {
       }
 
       #app_header {
-        display: flex;
-        align-items: center;
-        flex: 0;
         padding: 0.9em 1.1em;
         color: #000;
-        background-color: rgb(218 201 18);
+        background-color: rgb(255, 236, 25);
         /* background: rgb(37 39 42); */
         border-bottom: 1px solid #111;
         box-shadow: rgba(0, 0, 0, 0.15) 0px 1px 3px 0px;
@@ -43,8 +41,22 @@ export class AppContainer extends LitElement {
         margin: 0;
       }
 
+      #app_header nav {
+        display: flex;
+        align-items: center;
+        flex: 0;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      #app_header h1 {
+        font-size: 1.8em;
+        margin: 0 auto 0 0;
+      }
+
       #app_header h1 span {
-        font-size: 0.75em;
+        font-size: 0.73em;
+        text-shadow: 0 0 0 black, 0 0 0 black, 0 0 0 black;
       }
 
       #app_header sl-input {
@@ -70,7 +82,7 @@ export class AppContainer extends LitElement {
       main > *[state="active"] {
         height: auto;
         min-height: 100%;
-        overflow: auto;
+        overflow: visible;
       }
 
     `;
@@ -90,35 +102,36 @@ export class AppContainer extends LitElement {
       }
     ]);
 
-    this.addEventListener('open-content-modal', e => {
-      this.openContentModal();
-    })
+    this.addEventListener('app-notify', e => this.notify(e.detail.message, e.detail))
+
   }
 
   firstUpdated() {
     DOM.skipFrame(() => this.router.goto(location.pathname));
   }
 
-  openContentModal(){
-    this.renderRoot.querySelector('#add_content').show()
-  }
-
-  closeContentModal(){
-    this.renderRoot.querySelector('#add_content').hide()
+  notify(message, options = {}) {
+    const alert = Object.assign(document.createElement('sl-alert'), {
+      variant: 'primary',
+      duration: 3000,
+      closable: true,
+      innerHTML: `
+        <sl-icon name="${options.icon || 'info-circle'}" slot="icon"></sl-icon>
+        ${document.createTextNode(message).textContent}
+      `
+    }, options);
+    return document.body.appendChild(alert).toast();
   }
 
   render() {
     return html`
       <header id="app_header">
-        <h1>Mu<span>5</span>ic</h1>
-        <a href="/">My Music</a>
-        <a href="/explore">Explore</a>
+        <nav>
+          <h1>Mu<span>5</span>ic</h1>
+          <a href="/">My Music</a>
+          <a href="/explore">Explore</a>
+        </nav>
       </header>
-
-      <sl-dialog id="add_content" label="Add Content" class="dialog-overview">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-        <sl-button slot="footer" variant="primary">Close</sl-button>
-      </sl-dialog>
 
       <main id="pages">
         <page-home></page-home>

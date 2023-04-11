@@ -16,6 +16,16 @@ html, body {
   height: 100%;
 }
 
+body {
+  overflow-y: scroll;
+}
+
+.sl-toast-stack {
+  right: 0;
+  bottom: 0;
+  top: auto;
+}
+
 @media (prefers-color-scheme: dark) {
 
   html,
@@ -32,4 +42,43 @@ html, body {
     background-color: white;
     color: black;
   }
+}
+
+
+/* For Webkit-based browsers (Chrome, Safari) */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(40, 40, 40);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  border: 2px solid rgb(40, 40, 40);
+  background-clip: content-box;
+}
+
+/* For Firefox (version 64 and later) */
+body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) rgb(40, 40, 40);
+}
+
+/* For Edge */
+::-ms-scrollbar {
+  width: 10px;
+}
+
+::-ms-scrollbar-track {
+  background: rgb(40, 40, 40);
+}
+
+::-ms-scrollbar-thumb {
+  border-radius: 6px;
+  border: 2px solid rgb(40, 40, 40);
+  background-color: rgba(255, 255, 255, 0.25);
+  background-clip: content-box;
 }

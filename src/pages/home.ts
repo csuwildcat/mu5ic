@@ -61,7 +61,7 @@ export class PageHome extends LitElement {
         display: flex;
         flex: 1;
         opacity: 0;
-        transform: translateY(0.25em);
+        transform: translateY(0.3em);
         transition: opacity 0.3s ease, transform ease 0.2s;
       }
 
@@ -70,26 +70,64 @@ export class PageHome extends LitElement {
         transform: translateY(0);
       }
 
-      #page_tabs sl-tab-panel[active] {
-        display: flex;
+      #page_tabs sl-tab::part(base) {
+        font-size: 1.1em;
+        transition: color 0.2s ease;
       }
 
-      sl-tab-panel[name="songs"]:empty::before {
-        content: "Drag-and-drop or click here to add a song";
+      #page_tabs sl-tab::part(base) {
+        font-family: unset;
+      }
+
+      #page_tabs sl-tab:not([active])::part(base):hover {
+        color: #ccc;
+      }
+
+      #page_tabs sl-tab sl-icon {
+        padding-top: 0.1em;
+        margin-right: 0.6em;
+      }
+
+      #page_tabs sl-tab-panel[active] {
+        display: flex;
+        animation: fadePanel 0.75s ease forwards;
+      }
+
+      @keyframes fadePanel {
+        0% {
+          opacity: 0;
+        }
+
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .panel-intro {
         display: block;
         position: absolute;
         align-self: center;
         justify-self: center;
         top: 50%;
         left: 50%;
+        min-width: 150px;
+        max-width: 300px;
         padding: 3em;
-        border: 5px dashed rgba(255 255 255 / 10%);
-        border-radius: 3px;
-        transform: translate(-50%, -50%);
-        cursor: pointer;
+        text-align: center;
+        transform: translate(-50%, calc(-50% - 5vh));
       }
 
-      @media(min-width: 750px) {
+      .panel-intro > sl-icon {
+        font-size: 8em;
+        color: rgb(85 85 85);
+        filter: drop-shadow(0 3px 1px rgb(0 0 0 / 0.3));
+      }
+
+      .panel-intro p {
+        margin-bottom: 3em;
+      }
+
+      @media (min-width: 750px) {
 
       }
 
@@ -101,10 +139,7 @@ export class PageHome extends LitElement {
   }
 
   async firstUpdated() {
-    // this method is a lifecycle event in lit
-    // for more info check out the lit docs https://lit.dev/docs/components/lifecycle/
     console.log('This is your home page');
-
   }
 
   async onPageEnter(){
@@ -115,9 +150,33 @@ export class PageHome extends LitElement {
     // this.renderRoot?.querySelector('#top_controls')?.hide()
   }
 
+  openAudioPicker(){
+    this.renderRoot.querySelector('#audio_file_input').click()
+  }
+
+  openPlaylistModal(){
+    this.renderRoot.querySelector('#create_playlist_modal').show()
+  }
+
+  closePlaylistModal(){
+    this.renderRoot.querySelector('#create_playlist_modal').hide()
+  }
+
+  createPlaylist(name){
+    // Store to DWN
+    DOM.fireEvent(this, 'app-notify', {
+      composed: true,
+      detail: {
+        variant: 'success',
+        duration: 1000000,
+        message: `Playlist created: ${name}`
+      }
+    })
+    this.closePlaylistModal()
+  }
+
   render() {
     return html`
-
 
       <!-- <sl-drawer id="top_controls" placement="top" class="drawer-placement-top drawer-contained" no-header contained >
         <sl-icon-button name="plus-circle" label="Edit" style="font-size: 2rem;" @click="${e => {
@@ -126,16 +185,47 @@ export class PageHome extends LitElement {
       </sl-drawer> -->
 
       <sl-tab-group id="page_tabs">
-        <sl-tab slot="nav" panel="songs">Songs</sl-tab>
-        <sl-tab slot="nav" panel="playlists">Playlists</sl-tab>
-        <sl-tab slot="nav" panel="artists">Artists</sl-tab>
-        <sl-tab slot="nav" panel="genres">Genres</sl-tab>
+        <sl-tab slot="nav" panel="songs">
+          <sl-icon name="music-note-beamed"></sl-icon>
+          Songs
+        </sl-tab>
+        <sl-tab slot="nav" panel="playlists">
+          <sl-icon name="music-note-list"></sl-icon>
+          Playlists
+        </sl-tab>
 
-        <sl-tab-panel name="songs"></sl-tab-panel>
-        <sl-tab-panel name="playlists">TEST</sl-tab-panel>
-        <sl-tab-panel name="artists">This is the advanced tab panel.</sl-tab-panel>
-        <sl-tab-panel name="genres">This is a disabled tab panel.</sl-tab-panel>
+        <input id="audio_file_input" type="file" accept="audio/mp4, audio/mpeg, application/ogg" style="display: none;" />
+
+        <sl-tab-panel name="songs">
+          <div class="panel-intro">
+            <sl-icon name="music-note-beamed"></sl-icon>
+            <p>You haven't added any music, add your first song now.</p>
+            <sl-button variant="primary" @click="${e => this.openAudioPicker() }">
+              <sl-icon slot="prefix" name="plus-lg"></sl-icon>
+              Add Songs
+            </sl-button>
+          </div>
+        </sl-tab-panel>
+
+        <sl-tab-panel name="playlists">
+          <div class="panel-intro">
+            <sl-icon name="music-note-list"></sl-icon>
+            <p>You don't have any playlists, create your first one now.</p>
+            <sl-button variant="primary" @click="${e => this.openPlaylistModal() }">
+              <sl-icon slot="prefix" name="plus-lg"></sl-icon>
+              Create a Playlist
+            </sl-button>
+          </div>
+        </sl-tab-panel>
+
       </sl-tab-group>
+
+
+      <sl-dialog id="create_playlist_modal" label="Add Playlists" class="dialog-overview">
+        <sl-input id="create_playlist_input" placeholder="Enter playlist name"></sl-input>
+        <sl-button slot="footer" variant="danger" @click="${e => this.closePlaylistModal()}">Close</sl-button>
+        <sl-button slot="footer" variant="success" @click="${e => this.createPlaylist(this.renderRoot.querySelector('#create_playlist_input').value)}">Create</sl-button>
+      </sl-dialog>
 
     `;
   }

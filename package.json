@@ -7,13 +7,12 @@
     "dev-server": "vite --open",
     "dev": "npm run dev-server",
     "dev-task": "vite",
-    "deploy": " npx @azure/static-web-apps-cli login --no-use-keychain && npx @azure/static-web-apps-cli deploy",
     "build": "tsc && vite build",
     "start": "npm run dev",
     "start-remote": "vite --host"
   },
   "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "dependencies": {
     "@tbd54566975/web5": "0.3.1",
     "@shoelace-style/shoelace": "2.3.0",

@@ -1,6 +1,15 @@
 
 import { Router } from '@lit-labs/router';
 
+// const style = document.createElement('style');
+// const sheet = document.head.appendChild(style).sheet;
+// const index = sheet.insertRule('p { color: blue; }', 0);
+
+// function updateColor(color) {
+//   const rule = sheet.cssRules[index];
+//   rule.style.color = color;
+// }
+
 export class AppRouter extends Router {
   constructor(element, routes){
     super(element, routes.map((enteringRoute, i, routes) => {
