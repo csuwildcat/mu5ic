@@ -13,6 +13,10 @@ import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
 import '@shoelace-style/shoelace/dist/components/alert/alert.js';
 
+import { getPlaylistMap } from './utils/datastore.js';
+
+console.log(getPlaylistMap);
+
 const BASE_URL: string = (import.meta.env.BASE_URL).length > 2 ? (import.meta.env.BASE_URL).slice(1, -1) : (import.meta.env.BASE_URL);
 
 @customElement('app-container')
@@ -134,8 +138,8 @@ export class AppContainer extends LitElement {
       </header>
 
       <main id="pages">
-        <page-home></page-home>
-        <page-explore></page-explore>
+        <page-home id="home"></page-home>
+        <page-explore id="explore"></page-explore>
       </main>
     `;
   }

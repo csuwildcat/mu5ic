@@ -6,7 +6,12 @@ export default defineConfig({
   base: "/",
   build: {
     sourcemap: true,
-    assetsDir: "code",
+    assetsDir: "code"
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2020'
+    }
   },
   plugins: [
     VitePWA({
