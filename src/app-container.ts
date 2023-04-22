@@ -1,8 +1,15 @@
+globalThis.global = window;
+import { Buffer } from "buffer";
+import process from "process";
+globalThis.Buffer = Buffer;
+globalThis.process = process;
+
 import { LitElement, css, html } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { AppRouter } from './components/router';
 
 import './styles/global.css';
+import './styles/theme.js';
 import './utils/dom';
 
 import './pages/home';
@@ -13,9 +20,29 @@ import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
 import '@shoelace-style/shoelace/dist/components/alert/alert.js';
 
-import { getPlaylistMap } from './utils/datastore.js';
+import { Web5 } from '@tbd54566975/web5';
+const web5 = globalThis.web5 = new Web5();
+const userDID = localStorage.userDID ? JSON.parse(localStorage.userDID) : await web5.did.create('ion');
+      localStorage.userDID = JSON.stringify(userDID);
 
-console.log(getPlaylistMap);
+console.log(userDID);
+
+// Set Managed DID as running in browser memory and for which keys are available to sign messages.
+web5.did.manager.set(userDID.id, {
+  connected: true,
+  endpoint: 'app://dwn',
+  keys: {
+    '#dwn': {
+      'keyPair': userDID.keys.find(key => key.id === 'dwn').keyPair
+    }
+  }
+});
+
+import { Datastore } from './utils/datastore.js';
+const datastore = globalThis.datastore = new Datastore({
+  web5: web5,
+  did: userDID
+})
 
 const BASE_URL: string = (import.meta.env.BASE_URL).length > 2 ? (import.meta.env.BASE_URL).slice(1, -1) : (import.meta.env.BASE_URL);
 

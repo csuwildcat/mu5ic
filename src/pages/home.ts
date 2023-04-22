@@ -1,5 +1,6 @@
 import { LitElement, css, html, unsafeCSS } from 'lit';
 import { property, customElement } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 
 import { styles } from '../styles/shared-styles';
 
@@ -13,7 +14,9 @@ import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import '@shoelace-style/shoelace/dist/components/input/input.js';
 
 import '@vaadin/upload/theme/lumo/vaadin-upload.js';
-import '@vaadin/multi-select-combo-box/theme/lumo/vaadin-multi-select-combo-box.js';
+import '@vaadin/select/theme/lumo/vaadin-select.js';
+
+import * as musicParser from 'music-metadata-browser';
 
 import Plyr from 'plyr';
 import PlyrStyles from 'plyr/dist/plyr.css';
@@ -23,6 +26,22 @@ import Vudio from 'vudio'
 
 @customElement('page-home')
 export class PageHome extends LitElement {
+
+  constructor() {
+    super();
+    this.tracks = [];
+    datastore.ready.then(async () => {
+      this.tracks = await datastore.getTracks();
+      console.log(this.tracks);
+    });
+  }
+
+  static properties = {
+    tracks: {
+      type: Array,
+      attribute: false
+    }
+  }
 
   static get styles() {
     return [
@@ -58,6 +77,11 @@ export class PageHome extends LitElement {
         flex-direction: column;
         width: 100%;
         --track-color: transparent;
+      }
+
+      #page_tabs sl-tab-panel {
+        max-width: 700px;
+        margin: 0 auto;
       }
 
       #page_tabs::part(base) {
@@ -159,11 +183,34 @@ export class PageHome extends LitElement {
         opacity: 1;
       }
 
-    `];
-  }
+      #add_song_modal vaadin-upload-file::part(start-button) {
+        display: none;
+      }
 
-  constructor() {
-    super();
+      #add_song_modal vaadin-upload-file::part(status),
+      #add_song_modal vaadin-upload-file::part(error) {
+        display: none;
+      }
+
+      #song_list:not(:empty) ~ * {
+        display: none;
+      }
+
+      #song_list {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      #song_list li {
+        max-width: 6em;
+        margin: 1.25em;
+        cursor: pointer;
+      }
+
+    `];
   }
 
   async firstUpdated() {
@@ -187,10 +234,6 @@ export class PageHome extends LitElement {
   async onPageLeave(){
     this.renderRoot?.querySelector('#music_player')?.pause()
     //this.closeMusicPlayer()
-  }
-
-  openAudioPicker(){
-    this.renderRoot.querySelector('#audio_file_input').click()
   }
 
   openPlaylistModal(){
@@ -295,12 +338,31 @@ export class PageHome extends LitElement {
     this.closePlaylistModal()
   }
 
+  playAudioForTrack(trackId){
+    datastore.getAudioForTrack(trackId);
+  }
+
   openSongModal(){
     this.renderRoot.querySelector('#add_song_modal').show()
   }
 
   closeSongModal(){
     this.renderRoot.querySelector('#add_song_modal').hide()
+  }
+
+  async submitSongModal(){
+    await datastore.ready;
+    const uploader = this.renderRoot.querySelector('#add_song_modal vaadin-upload')
+    console.log(uploader.files)
+    for (let file of uploader.files) {
+      const metadata = await musicParser.parseBlob(file);
+      const track = await datastore.createTrack(metadata.common);
+      console.log('track: ', track)
+      const audio = await datastore.saveAudioForTrack(file, file.type, track.id);
+      console.log('audio: ', audio)
+      this.tracks.push(track);
+      this.requestUpdate();
+    }
   }
 
   render() {
@@ -317,15 +379,24 @@ export class PageHome extends LitElement {
           Playlists
         </sl-tab>
 
-        <input id="audio_file_input" type="file" accept="audio/mp4, audio/mpeg, application/ogg" style="display: none;" />
         <canvas id="visualizer_canvas"></canvas>
 
         <sl-tab-panel name="songs">
           <sl-button variant="success" @click="${e => this.openMusicPlayer()}">Open Controls</sl-button>
+          <ul id="song_list">${repeat(
+            this.tracks,
+            async track => track.id,
+            (track, index) => html`
+              <li @click="${e => this.playAudioForTrack(track.id)}">
+                <sl-icon name="music-note-beamed"></sl-icon>
+                <div>${track.trackData.title}<div>
+              </li>
+            `
+          )}</ul>
           <div class="panel-intro">
             <sl-icon name="music-note-beamed"></sl-icon>
             <p>You haven't added any music, add your first song now.</p>
-            <sl-button variant="primary" @click="${e => this.openAudioPicker() }">
+            <sl-button variant="primary" @click="${e => this.openSongModal() }">
               <sl-icon slot="prefix" name="plus-lg"></sl-icon>
               Add Songs
             </sl-button>
@@ -336,7 +407,7 @@ export class PageHome extends LitElement {
           <div class="panel-intro">
             <sl-icon name="music-note-list"></sl-icon>
             <p>You don't have any playlists, create your first one now.</p>
-            <sl-button variant="primary" @click="${e => this.openPlaylistModal() }">
+            <sl-button variant="primary" @click="${e => this.openSongModal() }">
               <sl-icon slot="prefix" name="plus-lg"></sl-icon>
               Create a Playlist
             </sl-button>
@@ -355,21 +426,34 @@ export class PageHome extends LitElement {
         <sl-button slot="footer" variant="success" @click="${e => this.createPlaylist(this.renderRoot.querySelector('#create_playlist_input').value)}">Create</sl-button>
       </sl-dialog>
 
-      <sl-dialog id="add_song_modal" label="Add Song" class="dialog-overview">
-        <label for="song_file_drop">Drag and drop enabled</label>
+      <sl-dialog id="add_song_modal" label="Add Songs" class="dialog-overview">
         <vaadin-upload
+          no-auto
           id="song_file_drop"
-          accept="audio/mp4, audio/mpeg, application/ogg"
+          accept="audio/mp4, audio/mpeg, application/ogg, .mp3, .m4a"
           .nodrop="${false}"
-        ></vaadin-upload>
-        <vaadin-multi-select-combo-box
+          @change="${{handleEvent: e => console.log(e), capture: true}}"
+        >
+          <vaadin-button slot="add-button" theme="primary">
+            Upload Song
+          </vaadin-button>
+          <span slot="drop-label">
+            Drop a music file to upload
+          </span>
+        </vaadin-upload>
+        <!-- <vaadin-select
           label="Add to a Playlist"
-          item-label-path="name"
-          item-id-path="id"
-          .items="${this.items}"
-        ></vaadin-multi-select-combo-box>
-        <sl-button slot="footer" variant="danger" @click="${e => this.closePlaylistModal()}">Close</sl-button>
-        <sl-button slot="footer" variant="success" @click="${e => this.createPlaylist(this.renderRoot.querySelector('#create_playlist_input').value)}">Create</sl-button>
+          placeholder="Select a playlist (optional)"
+          .items="${globalThis.datastore.getPlaylistMap().reduce((set, item) => {
+            set.push({
+              label: item.name,
+              value: item.recordId
+            });
+            return set;
+          }, [])}"
+        ></vaadin-select> -->
+        <sl-button slot="footer" variant="danger" @click="${e => this.closeSongModal()}">Close</sl-button>
+        <sl-button slot="footer" variant="success" @click="${e => this.submitSongModal()}">Add</sl-button>
       </sl-dialog>
 
     `;

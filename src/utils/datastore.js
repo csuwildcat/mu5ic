@@ -1,125 +1,200 @@
 
+class Datastore {
 
-import { Web5 } from '@tbd54566975/web5';
-
-const web5 = new Web5();
-console.log(web5);
-
-let userDID;
-const protocolUri = 'mu5ic';
-
-/* Playlists */
-
-const playlistSchema = 'mu5ic/playlist';
-
-function getPlaylist(playlistId){
-  return web5.dwn.records.read(userDID, {
-    author: userDID,
-    message: {
-      recordId: playlistId
-    }
-  });
-}
-
-function getPlaylists(){
-  return web5.dwn.records.query(userDID, {
-    author: userDID,
-    message: {
-      filter: {
-        protocol: protocolUri,
-        schema: playlistSchema
-      }
-    }
-  });
-}
-
-function getPlaylistMap(){
-  return {
-    'Rap': 'ID_1',
-    'Classic Rock': 'ID_2',
-    'Alternative': 'ID_3'
+  constructor(options){
+    this.did = options.did;
+    this.dwn = options.web5.dwn;
+    this.ready = new Promise(resolve => {
+      this.getProtocol().then(async response => {
+        if (response.entries.length) {
+          console.log('existing');
+          resolve();
+        }
+        else {
+          console.log('new')
+          this.setProtocol().then(z => resolve());
+        }
+      })
+    })
   }
-}
 
-function createPlaylist(playlistJson){
-  return web5.dwn.records.write(userDID, {
-    author: userDID,
-    data: playlistJson,
-    message: {
-      dataFormat: 'application/json'
-    }
-  });
-}
+  protocolUri = 'urn:music';
+  audioSchema = 'urn:music:audio';
+  trackSchema = 'urn:music:track';
+  playlistSchema = 'urn:music:playlist';
 
-function modifyPlaylist(){
-
-}
-
-/* Tracks */
-
-const trackSchema = 'mu5ic/track';
-
-function getTrack(trackId){
-  return web5.dwn.records.read(userDID, {
-    author: userDID,
-    message: {
-      recordId: trackId
-    }
-  });
-}
-
-function getTracks(){
-  return web5.dwn.records.query(userDID, {
-    author: userDID,
-    message: {
-      filter: {
-        protocol: protocolUri,
-        schema: trackSchema
+  getProtocol(){
+    return this.dwn.protocols.query(this.did.id, {
+      author: this.did.id,
+      message: {
+        filter: {
+          protocol: this.protocolUri
+        }
       }
-    }
-  });
-}
+    });
+  }
 
-function createTrack(trackJson){
-  return web5.dwn.records.write(userDID, {
-    author: userDID,
-    data: trackJson,
-    message: {
-      dataFormat: 'application/json'
-    }
-  });
-}
+  setProtocol(){
+    return this.dwn.protocols.configure(this.did.id, {
+      author: this.did.id,
+      message: {
+        protocol: this.protocolUri,
+        definition: {
+          labels: {
+            "audio": {
+              "schema": this.audioSchema
+            },
+            "track": {
+              "schema": this.trackSchema
+            },
+            "playlist": {
+              "schema": this.playlistSchema
+            }
+          },
+          records: {
+            playlist: {},
+            track: {
+              records: {
+                audio: {}
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 
-function modifyTrack(){
+  getPlaylist(playlistId){
+    return this.dwn.records.read(this.did.id, {
+      author: this.did.id,
+      message: {
+        protocol: this.protocolUri,
+        recordId: playlistId
+      }
+    });
+  }
 
-}
+  getPlaylists(){
+    return this.dwn.records.query(this.did.id, {
+      author: this.did.id,
+      message: {
+        filter: {
+          protocol: this.protocolUri,
+          schema: this.playlistSchema
+        }
+      }
+    });
+  }
 
-/* Audio */
+  getPlaylistMap(){
+    return [
+      {
+        name: 'Rap',
+        recordId: 'ID_1'
+      },
+      {
+        name: 'Classic Rock',
+        recordId: 'ID_2'
+      },
+      {
+        name: 'Alternative',
+        recordId: 'ID_3'
+      }
+    ]
+  }
 
-function getAudio(fileId){
+  createPlaylist(playlistJson){
+    return this.dwn.records.create(this.did.id, {
+      author: this.did.id,
+      data: playlistJson,
+      message: {
+        protocol: this.protocolUri,
+        schema: this.playlistSchema,
+        dataFormat: 'application/json'
+      }
+    });
+  }
 
-}
+  modifyPlaylist(){
 
-function saveAudio(file, trackId){
-  return web5.dwn.records.write(userDID, {
-    author: userDID,
-    data: trackJson,
-    message: {
-      dataFormat: 'application/json'
-    }
-  });
+  }
+
+  getTrack(trackId){
+    return this.dwn.records.read(this.did.id, {
+      author: this.did.id,
+      message: {
+        recordId: trackId
+      }
+    });
+  }
+
+  async getTracks(){
+    const response = await this.dwn.records.query(this.did.id, {
+      author: this.did.id,
+      message: {
+        filter: {
+          protocol: this.protocolUri,
+          schema: this.trackSchema
+        }
+      }
+    });
+    return Promise.all(response.entries.map(async entry => {
+      const json = await entry.data.json()
+      entry.trackData = json;
+      return entry;
+    }))
+  }
+
+  async createTrack(trackJson){
+    console.log(this.did.id);
+    const response = await this.dwn.records.create(this.did.id, {
+      author: this.did.id,
+      data: trackJson,
+      message: {
+        protocol: this.protocolUri,
+        schema: this.trackSchema,
+        dataFormat: 'application/json'
+      }
+    });
+    response.record.trackData = await response.record.data.json();
+    console.log(response.record);
+    return response.record;
+  }
+
+  async modifyTrack(){
+
+  }
+
+  async getAudioForTrack(trackId){
+    console.log(trackId);
+    const results = await this.dwn.records.query(this.did.id, {
+      author: this.did.id,
+      message: {
+        filter: {
+          protocol: this.protocolUri
+        }
+      }
+    });
+    const song = results.entries[0];
+    console.log(results);
+  }
+
+  async saveAudioForTrack(file, format, trackId){
+    return this.dwn.records.create(this.did.id, {
+      author: this.did.id,
+      data: new Uint8Array(await file.arrayBuffer()), // rip this jank out when we get streams going again
+      message: {
+        parentId: trackId,
+        protocol: this.protocolUri,
+        schema: this.audioSchema,
+        dataFormat: format
+      }
+    });
+  }
+
 }
 
 
 export {
-  getPlaylist,
-  getPlaylists,
-  getPlaylistMap,
-  createPlaylist,
-  modifyPlaylist,
-  getTrack,
-  getTracks,
-  createTrack,
-  modifyTrack,
-  getAudio
+  Datastore
 }
