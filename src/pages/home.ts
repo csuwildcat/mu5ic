@@ -49,7 +49,7 @@ export class PageHome extends LitElement {
   static get styles() {
     return [
       styles,
-      scrollStyles(':host'),
+      // scrollStyles(':host'),
       unsafeCSS(PlyrStyles),
       css`
       :host > * {
@@ -284,14 +284,18 @@ export class PageHome extends LitElement {
       }
 
       #song_list > ul li {
+        margin: 0 0 0.5em;
         padding: 0.5em 0.7em 0.6em;
         background-color: rgb(24 24 24);
-        transition: background-color 0.3s ease;
         cursor: pointer;
       }
 
       #song_list > ul li:hover {
         background-color: rgb(34 34 34);
+      }
+
+      #song_list > ul li sl-icon {
+        vertical-align: middle;
       }
 
     `];

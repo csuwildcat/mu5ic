@@ -80,6 +80,13 @@ export class AppContainer extends LitElement {
         margin: 0 auto;
       }
 
+      #app_header nav a {
+        margin: 0 0.5em;
+        color: rgba(0 0 0 / 80%);
+        text-decoration: none;
+        font-weight: bold;
+      }
+
       #app_header h1 {
         font-size: 1.8em;
         margin: 0 auto 0 0;
@@ -108,11 +115,49 @@ export class AppContainer extends LitElement {
         display: flex;
         width: 100%;
         height: 100%;
-        overflow: hidden;
+        overflow-y: scroll;
       }
 
-      main > *[state="active"] {
-        overflow-y: auto;
+      /* main > *[state="active"] {
+        overflow-y: scroll;
+      } */
+
+      /* For Webkit-based browsers (Chrome, Safari) */
+      ::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgb(40, 40, 40);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.25);
+        border-radius: 6px;
+        border: 2px solid rgb(40, 40, 40);
+        background-clip: content-box;
+      }
+
+      /* For Firefox (version 64 and later) */
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.25) rgb(40, 40, 40);
+      }
+
+      /* For Edge */
+      ::-ms-scrollbar {
+        width: 10px;
+      }
+
+      ::-ms-scrollbar-track {
+        background: rgb(40, 40, 40);
+      }
+
+      ::-ms-scrollbar-thumb {
+        border-radius: 6px;
+        border: 2px solid rgb(40, 40, 40);
+        background-color: rgba(255, 255, 255, 0.25);
+        background-clip: content-box;
       }
 
     `;
@@ -163,7 +208,7 @@ export class AppContainer extends LitElement {
         </nav>
       </header>
 
-      <main id="pages">
+      <main id="pages" scroll>
         <page-home id="home" scroll></page-home>
         <page-explore id="explore" scroll></page-explore>
       </main>
