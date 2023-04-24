@@ -151,7 +151,7 @@ export class PageHome extends LitElement {
         text-align: center;
         opacity: 0;
         visibility: hidden;
-        transform: translate(-50%, calc(-50% - 5vh));
+        transform: translate(-50%, calc(-50% - 15vh));
         transition: opacity 0.3s ease, visibility 0.3s linear;
       }
 
@@ -177,6 +177,18 @@ export class PageHome extends LitElement {
         overflow: unset;
         z-index: 3;
       }
+
+      #now_playing {
+        margin: 0px 2em 0.5em;
+        text-align: center;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+/*
+      #now_playing:before {
+        content: "Foo Band - Bar Track";
+      } */
 
       #music_controls .plyr {
         --plyr-audio-control-color: rgba(255,255,255,0.5);
@@ -240,8 +252,10 @@ export class PageHome extends LitElement {
         transition: opacity 1s ease;
       }
 
-      #song_list:empty {
+      #song_list:empty,
+      #song_list:empty ~ #song_nav {
         opacity: 0;
+        visibility: hidden;
         z-index: 0;
       }
 
@@ -249,12 +263,6 @@ export class PageHome extends LitElement {
         opacity: 1;
         visibility: visible;
         z-index: 1;
-      }
-
-      #song_list:empty ~ #song_nav {
-        opacity: 0;
-        visibility: hidden;
-        z-index: 0;
       }
 
       #song_list > header {
@@ -490,9 +498,9 @@ export class PageHome extends LitElement {
     this.closePlaylistModal()
   }
 
-  async playAudioForTrack(trackId){
-    const audio = await datastore.getAudioForTrack(trackId);
-    console.log(audio);
+  async playAudioForTrack(track){
+    const audio = await datastore.getAudioForTrack(track.id);
+    this.renderRoot.querySelector('#now_playing').textContent = track.trackData.filename;
     this.audioElement.src = audio.audioUrl;
     this.audioElement.setAttribute('type', audio.dataFormat);
     this.musicPlayer.play();
@@ -557,7 +565,7 @@ export class PageHome extends LitElement {
                   this.tracksByArtist[artist].sort(),
                   async track => track.id,
                   track => html`
-                    <li @click="${e => this.playAudioForTrack(track.id)}">
+                    <li @click="${e => this.playAudioForTrack(track)}">
                       <sl-icon name="music-note-beamed"></sl-icon>
                       <span>${track.trackData.title || track.trackData.filename}<span>
                     </li>
@@ -601,6 +609,7 @@ export class PageHome extends LitElement {
       <canvas id="visualizer_canvas"></canvas>
 
       <sl-drawer id="music_controls" placement="bottom" class="drawer-placement-bottom drawer-contained" no-header contained>
+        <h3 id="now_playing"></h3>
         <audio id="music_player" controls></audio>
       </sl-drawer>
 
