@@ -145,9 +145,10 @@ export class PageHome extends LitElement {
         justify-self: center;
         top: 50vh;
         left: 50vw;
-        min-width: 150px;
+        width: 100%;
+        min-width: 270px;
         max-width: 300px;
-        padding: 3em;
+        padding: 5vw;
         text-align: center;
         opacity: 0;
         visibility: hidden;
@@ -162,7 +163,7 @@ export class PageHome extends LitElement {
       }
 
       .panel-intro p {
-        margin-bottom: 3em;
+        margin-bottom: 2em;
       }
 
       #music_controls::part(panel) {
@@ -241,7 +242,7 @@ export class PageHome extends LitElement {
         display: flex;
         justify-content: end;
         position: sticky;
-        top: 2em;
+        top: 1em;
         margin: 1em 0 0;
         transition: opacity 0.3s ease;
       }
@@ -266,8 +267,8 @@ export class PageHome extends LitElement {
       }
 
       #song_list > header {
-        position: sticky;
-        top: 4.5em;
+        /* position: sticky;
+        top: 4.5em; */
         padding: 0.5em 0.75em;
         margin: 1.5em 0 1em;
         font-size: 1.2em;
