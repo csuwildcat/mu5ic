@@ -35,7 +35,6 @@ export class PageHome extends LitElement {
     this.tracksByPlaylist = {};
     datastore.ready.then(async () => {
       this.addTracks(await datastore.getTracks());
-      console.log(this.tracks);
     });
   }
 
@@ -132,21 +131,11 @@ export class PageHome extends LitElement {
 
       #page_tabs sl-tab-panel[active] {
         display: block;
-        animation: fadePanel 0.75s ease forwards;
+        animation: fadeIn 0.75s ease forwards;
       }
 
       #page_tabs sl-tab-panel::part(base) {
         margin: 0 1em;
-      }
-
-      @keyframes fadePanel {
-        0% {
-          opacity: 0;
-        }
-
-        100% {
-          opacity: 1;
-        }
       }
 
       .panel-intro {
@@ -154,13 +143,16 @@ export class PageHome extends LitElement {
         position: absolute;
         align-self: center;
         justify-self: center;
-        top: 50%;
-        left: 50%;
+        top: 50vh;
+        left: 50vw;
         min-width: 150px;
         max-width: 300px;
         padding: 3em;
         text-align: center;
+        opacity: 0;
+        visibility: hidden;
         transform: translate(-50%, calc(-50% - 5vh));
+        transition: opacity 0.3s ease, visibility 0.3s linear;
       }
 
       .panel-intro > sl-icon {
@@ -177,9 +169,12 @@ export class PageHome extends LitElement {
         position: fixed;
         bottom: 0px;
         height: auto;
+        overflow: unset;
       }
 
       #music_controls::part(body) {
+        padding: min(2.25vw, 0.85em) min(1.75vw, 0.75em);
+        overflow: unset;
         z-index: 3;
       }
 
@@ -195,15 +190,6 @@ export class PageHome extends LitElement {
         opacity: 0;
         transition: opacity 1s ease;
         z-index: -1;
-      }
-
-      :host([playing]) #visualizer_canvas {
-        opacity: 1;
-      }
-
-      :host([playing]) #page_tabs:hover ~ #visualizer_canvas {
-        opacity: 0.2;
-        transition: opacity 0.5s ease;
       }
 
       #add_song_modal vaadin-upload > vaadin-button {
@@ -232,11 +218,7 @@ export class PageHome extends LitElement {
       #song_panel::part(base) {
         display: flex;
         flex-direction: column;
-        transition: opacity 0.5s ease;
-      }
-
-      :host([playing]) #song_panel::part(base) {
-        opacity: 0.4;
+        transition: opacity 0.3s ease;
       }
 
       #page_tabs:hover #song_panel::part(base) {
@@ -249,19 +231,30 @@ export class PageHome extends LitElement {
         position: sticky;
         top: 2em;
         margin: 1em 0 0;
+        transition: opacity 0.3s ease;
       }
 
       #song_list {
         /* height: 2000px; */
         order: 2;
+        transition: opacity 1s ease;
       }
 
-      #song_list:not(:empty) ~ .panel-intro {
-        display: none;
+      #song_list:empty {
+        opacity: 0;
+        z-index: 0;
+      }
+
+      #song_list:empty ~ .panel-intro {
+        opacity: 1;
+        visibility: visible;
+        z-index: 1;
       }
 
       #song_list:empty ~ #song_nav {
-        display: none;
+        opacity: 0;
+        visibility: hidden;
+        z-index: 0;
       }
 
       #song_list > header {
@@ -298,6 +291,51 @@ export class PageHome extends LitElement {
         vertical-align: middle;
       }
 
+      @keyframes fadeIn {
+        0% {
+          opacity: 0;
+        }
+
+        100% {
+          opacity: 1;
+        }
+      }
+
+      @keyframes fadeOut {
+        0% {
+          opacity: 0;
+        }
+
+        100% {
+          opacity: 1;
+        }
+      }
+
+      @media (hover: none) {
+
+        :host([playing]) #visualizer_canvas {
+          opacity: 0.2;
+        }
+
+      }
+
+      @media (hover: hover) {
+
+        :host([playing]) #song_panel::part(base) {
+          opacity: 0.4;
+        }
+
+        :host([playing]) #visualizer_canvas {
+          opacity: 1;
+        }
+
+        :host([playing]) #page_tabs:hover ~ #visualizer_canvas {
+          opacity: 0.2;
+          transition: opacity 0.5s ease;
+        }
+
+      }
+
     `];
   }
 
@@ -319,7 +357,6 @@ export class PageHome extends LitElement {
     const iterable = Array.isArray(tracks) ? tracks : [tracks];
     this.tracks.push(...iterable);
     for (let track of iterable) {
-      console.log(track.trackData);
       const artist = track.trackData?.artist?.trim() || 'Unknown';
       const artistBucket = this.tracksByArtist[artist] || (this.tracksByArtist[artist] = []);
       artistBucket.push(track);
@@ -336,12 +373,15 @@ export class PageHome extends LitElement {
   }
 
   async onPageEnter(){
-    // this.renderRoot?.querySelector('#top_controls')?.show()
+    if (this.musicDrawerWasOpen){
+      this.openMusicPlayer();
+    }
   }
 
   async onPageLeave(){
     this.renderRoot?.querySelector('#music_player')?.pause()
-    //this.closeMusicPlayer()
+    this.musicDrawerWasOpen = this.musicDrawer.hasAttribute('open');
+    this.closeMusicPlayer();
   }
 
   openPlaylistModal(){
@@ -352,12 +392,16 @@ export class PageHome extends LitElement {
     this.renderRoot.querySelector('#create_playlist_modal').hide()
   }
 
+  get musicDrawer(){
+    return this.renderRoot.querySelector('#music_controls')
+  }
+
   openMusicPlayer(){
-    this.renderRoot.querySelector('#music_controls').show()
+    this.musicDrawer.show()
   }
 
   closeMusicPlayer(){
-    this.renderRoot.querySelector('#music_controls').hide()
+    this.musicDrawer.hide()
   }
 
   connectVisualizer(){
