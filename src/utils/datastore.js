@@ -1,4 +1,6 @@
 
+import { toWebStream } from "./streams";
+
 class Datastore {
 
   constructor(options){
@@ -18,10 +20,10 @@ class Datastore {
     })
   }
 
-  protocolUri = 'urn:music';
-  audioSchema = 'urn:music:audio';
-  trackSchema = 'urn:music:track';
-  playlistSchema = 'urn:music:playlist';
+  protocolUri = 'music';
+  audioSchema = 'music://audio';
+  trackSchema = 'music://track';
+  playlistSchema = 'music://playlist';
 
   getProtocol(){
     return this.dwn.protocols.query(this.did.id, {
@@ -146,7 +148,6 @@ class Datastore {
   }
 
   async createTrack(trackJson){
-    console.log(this.did.id);
     const response = await this.dwn.records.create(this.did.id, {
       author: this.did.id,
       data: trackJson,
@@ -157,7 +158,6 @@ class Datastore {
       }
     });
     response.record.trackData = await response.record.data.json();
-    console.log(response.record);
     return response.record;
   }
 
@@ -166,17 +166,21 @@ class Datastore {
   }
 
   async getAudioForTrack(trackId){
-    console.log(trackId);
     const results = await this.dwn.records.query(this.did.id, {
       author: this.did.id,
       message: {
         filter: {
-          protocol: this.protocolUri
+          protocol: this.protocolUri,
+          parentId: trackId
         }
       }
     });
-    const song = results.entries[0];
-    console.log(results);
+    const record = results.entries[0];
+    if (!record) return;
+    const stream = toWebStream(await record.data.stream())
+    const blob = await (new Response(stream).blob({ type: record.dataFormat }));
+    record.audioUrl = URL.createObjectURL(blob);
+    return record;
   }
 
   async saveAudioForTrack(file, format, trackId){
@@ -185,6 +189,7 @@ class Datastore {
       data: new Uint8Array(await file.arrayBuffer()), // rip this jank out when we get streams going again
       message: {
         parentId: trackId,
+        contextId: trackId,
         protocol: this.protocolUri,
         schema: this.audioSchema,
         dataFormat: format

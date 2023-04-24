@@ -98,6 +98,7 @@ export class AppContainer extends LitElement {
       }
 
       main {
+        display: flex;
         position: relative;
         flex: 1;
       }
@@ -111,9 +112,7 @@ export class AppContainer extends LitElement {
       }
 
       main > *[state="active"] {
-        height: auto;
-        min-height: 100%;
-        overflow: visible;
+        overflow-y: auto;
       }
 
     `;
@@ -165,8 +164,8 @@ export class AppContainer extends LitElement {
       </header>
 
       <main id="pages">
-        <page-home id="home"></page-home>
-        <page-explore id="explore"></page-explore>
+        <page-home id="home" scroll></page-home>
+        <page-explore id="explore" scroll></page-explore>
       </main>
     `;
   }

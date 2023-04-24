@@ -3,6 +3,7 @@ import { property, customElement } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 
 import { styles } from '../styles/shared-styles';
+import { styles as scrollStyles } from '../styles/scroll';
 
 import '@shoelace-style/shoelace/dist/components/tab/tab.js';
 import '@shoelace-style/shoelace/dist/components/tab-panel/tab-panel.js';
@@ -12,6 +13,7 @@ import '@shoelace-style/shoelace/dist/components/card/card.js';
 import '@shoelace-style/shoelace/dist/components/button/button.js';
 import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';
 import '@shoelace-style/shoelace/dist/components/input/input.js';
+import '@shoelace-style/shoelace/dist/components/checkbox/checkbox.js';
 
 import '@vaadin/upload/theme/lumo/vaadin-upload.js';
 import '@vaadin/select/theme/lumo/vaadin-select.js';
@@ -21,7 +23,6 @@ import * as musicParser from 'music-metadata-browser';
 import Plyr from 'plyr';
 import PlyrStyles from 'plyr/dist/plyr.css';
 
-// import '../components/waveform-visualizer';
 import Vudio from 'vudio'
 
 @customElement('page-home')
@@ -30,8 +31,10 @@ export class PageHome extends LitElement {
   constructor() {
     super();
     this.tracks = [];
+    this.tracksByArtist = {};
+    this.tracksByPlaylist = {};
     datastore.ready.then(async () => {
-      this.tracks = await datastore.getTracks();
+      this.addTracks(await datastore.getTracks());
       console.log(this.tracks);
     });
   }
@@ -46,10 +49,9 @@ export class PageHome extends LitElement {
   static get styles() {
     return [
       styles,
+      scrollStyles(':host'),
+      unsafeCSS(PlyrStyles),
       css`
-
-      ${unsafeCSS(PlyrStyles)}
-
       :host > * {
         opacity: 0;
         transition: opacity 0.3s ease;
@@ -73,19 +75,19 @@ export class PageHome extends LitElement {
       }
 
       #page_tabs {
-        display: flex;
-        flex-direction: column;
         width: 100%;
         --track-color: transparent;
       }
 
       #page_tabs sl-tab-panel {
+        width: 100%;
         max-width: 700px;
         margin: 0 auto;
       }
 
       #page_tabs::part(base) {
         flex: 1;
+        height: 100%;
       }
 
       #page_tabs::part(nav) {
@@ -101,6 +103,7 @@ export class PageHome extends LitElement {
         display: flex;
         flex: 1;
         opacity: 0;
+        overflow: unset;
         transform: translateY(0.3em);
         transition: opacity 0.3s ease, transform ease 0.2s;
       }
@@ -123,9 +126,17 @@ export class PageHome extends LitElement {
         margin-right: 0.6em;
       }
 
+      #page_tabs sl-tab-panel {
+        padding: 0 0 6em;
+      }
+
       #page_tabs sl-tab-panel[active] {
-        display: flex;
+        display: block;
         animation: fadePanel 0.75s ease forwards;
+      }
+
+      #page_tabs sl-tab-panel::part(base) {
+        margin: 0 1em;
       }
 
       @keyframes fadePanel {
@@ -163,7 +174,13 @@ export class PageHome extends LitElement {
       }
 
       #music_controls::part(panel) {
+        position: fixed;
+        bottom: 0px;
         height: auto;
+      }
+
+      #music_controls::part(body) {
+        z-index: 3;
       }
 
       #music_controls .plyr {
@@ -172,42 +189,109 @@ export class PageHome extends LitElement {
       }
 
       #visualizer_canvas {
-        position: absolute;
+        position: fixed;
         height: 100%;
         width: 100%;
         opacity: 0;
-        transition: opacity 1.5s ease;
+        transition: opacity 1s ease;
+        z-index: -1;
       }
 
-      #visualizer_canvas[active] {
+      :host([playing]) #visualizer_canvas {
         opacity: 1;
       }
 
-      #add_song_modal vaadin-upload-file::part(start-button) {
-        display: none;
+      :host([playing]) #page_tabs:hover ~ #visualizer_canvas {
+        opacity: 0.2;
+        transition: opacity 0.5s ease;
       }
 
+      #add_song_modal vaadin-upload > vaadin-button {
+        margin: 0.5em 0;
+      }
+
+      #add_song_modal vaadin-upload-file-list li:last-child vaadin-upload-file {
+        padding-bottom: 0;
+      }
+
+      #add_song_modal vaadin-upload-file::part(start-button),
       #add_song_modal vaadin-upload-file::part(status),
-      #add_song_modal vaadin-upload-file::part(error) {
-        display: none;
+      #add_song_modal vaadin-upload-file::part(warning-icon),
+      #add_song_modal vaadin-upload-file::part(warning-icon)::before,
+      #add_song_modal vaadin-upload-file::part(done-icon),
+      #add_song_modal vaadin-upload-file::part(done-icon)::before,
+      #add_song_modal vaadin-upload-file::part(error),
+      #add_song_modal vaadin-upload-file vaadin-progress-bar {
+        display: none !important;
       }
 
-      #song_list:not(:empty) ~ * {
-        display: none;
+      #add_song_modal vaadin-upload-file::part(commands) {
+        align-self: center;
+      }
+
+      #song_panel::part(base) {
+        display: flex;
+        flex-direction: column;
+        transition: opacity 0.5s ease;
+      }
+
+      :host([playing]) #song_panel::part(base) {
+        opacity: 0.4;
+      }
+
+      #page_tabs:hover #song_panel::part(base) {
+        opacity: 1;
+      }
+
+      #song_nav {
+        display: flex;
+        justify-content: end;
+        position: sticky;
+        top: 2em;
+        margin: 1em 0 0;
       }
 
       #song_list {
-        display: flex;
-        flex-wrap: wrap;
+        /* height: 2000px; */
+        order: 2;
+      }
+
+      #song_list:not(:empty) ~ .panel-intro {
+        display: none;
+      }
+
+      #song_list:empty ~ #song_nav {
+        display: none;
+      }
+
+      #song_list > header {
+        position: sticky;
+        top: 4.5em;
+        padding: 0.5em 0.75em;
+        margin: 1.5em 0 1em;
+        font-size: 1.2em;
+        font-weight: bold;
+        background: var(--header-bar);
+        box-shadow: rgba(20, 20, 20, 0.75) 0px 2px 2px;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+      }
+
+      #song_list > ul {
         margin: 0;
         padding: 0;
         list-style: none;
       }
 
-      #song_list li {
-        max-width: 6em;
-        margin: 1.25em;
+      #song_list > ul li {
+        padding: 0.5em 0.7em 0.6em;
+        background-color: rgb(24 24 24);
+        transition: background-color 0.3s ease;
         cursor: pointer;
+      }
+
+      #song_list > ul li:hover {
+        background-color: rgb(34 34 34);
       }
 
     `];
@@ -225,6 +309,26 @@ export class PageHome extends LitElement {
       console.log(e);
       this.openSongModal();
     });
+  }
+
+  addTracks(tracks){
+    const iterable = Array.isArray(tracks) ? tracks : [tracks];
+    this.tracks.push(...iterable);
+    for (let track of iterable) {
+      console.log(track.trackData);
+      const artist = track.trackData?.artist?.trim() || 'Unknown';
+      const artistBucket = this.tracksByArtist[artist] || (this.tracksByArtist[artist] = []);
+      artistBucket.push(track);
+      const playlists = track.trackData.playlists || [];
+      if (playlists.length) {
+        for (let playlist of playlists) {
+          let playlist = this.tracksByPlaylist[playlist] || [];
+          playlist.push(track);
+          this.tracksByPlaylist[playlist] = playlist;
+        }
+      }
+    }
+    this.requestUpdate();
   }
 
   async onPageEnter(){
@@ -253,7 +357,7 @@ export class PageHome extends LitElement {
   }
 
   connectVisualizer(){
-    let audio = this.renderRoot.querySelector('#music_player');
+    let audio = this.audioElement = this.renderRoot.querySelector('#music_player');
     let canvas = this.renderRoot.querySelector('#visualizer_canvas');
     audio.onplay = e => {
       if (!this.visualizer) {
@@ -315,13 +419,13 @@ export class PageHome extends LitElement {
       this.visualizer.dance()
     };
     audio.onplaying = e => {
-      canvas.setAttribute('active', '')
+      this.setAttribute('playing', '')
     }
     audio.onpause = e => {
-      canvas.removeAttribute('active')
+      this.removeAttribute('playing')
     }
     audio.onended = e => {
-      canvas.removeAttribute('active')
+      this.removeAttribute('playing')
     }
   }
 
@@ -338,8 +442,13 @@ export class PageHome extends LitElement {
     this.closePlaylistModal()
   }
 
-  playAudioForTrack(trackId){
-    datastore.getAudioForTrack(trackId);
+  async playAudioForTrack(trackId){
+    const audio = await datastore.getAudioForTrack(trackId);
+    console.log(audio);
+    this.audioElement.src = audio.audioUrl;
+    this.audioElement.setAttribute('type', audio.dataFormat);
+    this.musicPlayer.play();
+    this.openMusicPlayer();
   }
 
   openSongModal(){
@@ -350,19 +459,31 @@ export class PageHome extends LitElement {
     this.renderRoot.querySelector('#add_song_modal').hide()
   }
 
+  clearUploader(){
+    const uploader = this.renderRoot.querySelector('#add_song_modal vaadin-upload');
+    uploader.files = [];
+  }
+
   async submitSongModal(){
     await datastore.ready;
     const uploader = this.renderRoot.querySelector('#add_song_modal vaadin-upload')
     console.log(uploader.files)
-    for (let file of uploader.files) {
-      const metadata = await musicParser.parseBlob(file);
-      const track = await datastore.createTrack(metadata.common);
-      console.log('track: ', track)
-      const audio = await datastore.saveAudioForTrack(file, file.type, track.id);
-      console.log('audio: ', audio)
-      this.tracks.push(track);
-      this.requestUpdate();
+    try {
+      for (let file of uploader.files) {
+        const metadata = await musicParser.parseBlob(file);
+        console.log(metadata);
+        metadata.common.filename = file.name.replace(/\..+$/, '')
+        const track = await datastore.createTrack(metadata.common);
+        console.log('track: ', track)
+        const audio = await datastore.saveAudioForTrack(file, file.type, track.id);
+        console.log('audio: ', audio)
+        this.addTracks(track);
+      }
     }
+    catch(e){
+      console.log(e);
+    }
+    this.closeSongModal();
   }
 
   render() {
@@ -379,20 +500,32 @@ export class PageHome extends LitElement {
           Playlists
         </sl-tab>
 
-        <canvas id="visualizer_canvas"></canvas>
-
-        <sl-tab-panel name="songs">
-          <sl-button variant="success" @click="${e => this.openMusicPlayer()}">Open Controls</sl-button>
-          <ul id="song_list">${repeat(
-            this.tracks,
-            async track => track.id,
-            (track, index) => html`
-              <li @click="${e => this.playAudioForTrack(track.id)}">
-                <sl-icon name="music-note-beamed"></sl-icon>
-                <div>${track.trackData.title}<div>
-              </li>
+        <sl-tab-panel id="song_panel" name="songs">
+          <section id="song_list">${Object.keys(this.tracksByArtist).sort().map(artist => {
+            return html`
+              <header>${artist}</header>
+              <ul>
+                ${repeat(
+                  this.tracksByArtist[artist].sort(),
+                  async track => track.id,
+                  track => html`
+                    <li @click="${e => this.playAudioForTrack(track.id)}">
+                      <sl-icon name="music-note-beamed"></sl-icon>
+                      <span>${track.trackData.title || track.trackData.filename}<span>
+                    </li>
+                  `
+                )}
+              </ul>
             `
-          )}</ul>
+          })}</section>
+
+          <nav id="song_nav">
+            <sl-button variant="primary" size="small" @click="${e => this.openSongModal() }">
+              <sl-icon slot="prefix" name="plus-lg"></sl-icon>
+              Add Songs
+            </sl-button>
+          </nav>
+
           <div class="panel-intro">
             <sl-icon name="music-note-beamed"></sl-icon>
             <p>You haven't added any music, add your first song now.</p>
@@ -401,6 +534,7 @@ export class PageHome extends LitElement {
               Add Songs
             </sl-button>
           </div>
+
         </sl-tab-panel>
 
         <sl-tab-panel name="playlists">
@@ -416,8 +550,10 @@ export class PageHome extends LitElement {
 
       </sl-tab-group>
 
+      <canvas id="visualizer_canvas"></canvas>
+
       <sl-drawer id="music_controls" placement="bottom" class="drawer-placement-bottom drawer-contained" no-header contained>
-        <audio id="music_player" src="/public/audio/beat-1.mp3" controls></audio>
+        <audio id="music_player" controls></audio>
       </sl-drawer>
 
       <sl-dialog id="create_playlist_modal" label="Add Playlists" class="dialog-overview">
@@ -426,7 +562,7 @@ export class PageHome extends LitElement {
         <sl-button slot="footer" variant="success" @click="${e => this.createPlaylist(this.renderRoot.querySelector('#create_playlist_input').value)}">Create</sl-button>
       </sl-dialog>
 
-      <sl-dialog id="add_song_modal" label="Add Songs" class="dialog-overview">
+      <sl-dialog id="add_song_modal" label="Add Songs" class="dialog-overview" @sl-hide="${e => this.clearUploader()}">
         <vaadin-upload
           no-auto
           id="song_file_drop"
