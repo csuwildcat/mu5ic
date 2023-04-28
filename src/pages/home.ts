@@ -30,9 +30,10 @@ export class PageHome extends LitElement {
 
   constructor() {
     super();
-    this.tracks = [];
+    this.tracks = {};
     this.tracksByArtist = {};
     this.tracksByPlaylist = {};
+    this.songsSortedByArtist = [];
     datastore.ready.then(async () => {
       this.addTracks(await datastore.getTracks());
     });
@@ -51,6 +52,11 @@ export class PageHome extends LitElement {
       // scrollStyles(':host'),
       unsafeCSS(PlyrStyles),
       css`
+
+      :host {
+        --content-max-width: 700px;
+      }
+
       :host > * {
         opacity: 0;
         transition: opacity 0.3s ease;
@@ -80,7 +86,7 @@ export class PageHome extends LitElement {
 
       #page_tabs sl-tab-panel {
         width: 100%;
-        max-width: 700px;
+        max-width: var(--content-max-width);
         margin: 0 auto;
       }
 
@@ -126,7 +132,7 @@ export class PageHome extends LitElement {
       }
 
       #page_tabs sl-tab-panel {
-        padding: 0 0 6em;
+        padding: 0 0 8em;
       }
 
       #page_tabs sl-tab-panel[active] {
@@ -164,36 +170,6 @@ export class PageHome extends LitElement {
 
       .panel-intro p {
         margin-bottom: 2em;
-      }
-
-      #music_controls::part(panel) {
-        position: fixed;
-        bottom: 0px;
-        height: auto;
-        overflow: unset;
-      }
-
-      #music_controls::part(body) {
-        padding: min(2.25vw, 0.85em) min(1.75vw, 0.75em);
-        overflow: unset;
-        z-index: 3;
-      }
-
-      #now_playing {
-        margin: 0px 2em 0.5em;
-        text-align: center;
-        text-overflow: ellipsis;
-        overflow: hidden;
-        white-space: nowrap;
-      }
-/*
-      #now_playing:before {
-        content: "Foo Band - Bar Track";
-      } */
-
-      #music_controls .plyr {
-        --plyr-audio-control-color: rgba(255,255,255,0.5);
-        --plyr-audio-controls-background: transparent;
       }
 
       #visualizer_canvas {
@@ -279,25 +255,78 @@ export class PageHome extends LitElement {
         -webkit-backdrop-filter: blur(5px);
       }
 
-      #song_list > ul {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-
-      #song_list > ul li {
+      #song_list div {
         margin: 0 0 0.5em;
         padding: 0.5em 0.7em 0.6em;
         background-color: rgb(24 24 24);
         cursor: pointer;
       }
 
-      #song_list > ul li:hover {
+      #song_list div:hover {
         background-color: rgb(34 34 34);
       }
 
-      #song_list > ul li sl-icon {
+      #song_list div sl-icon {
         vertical-align: middle;
+      }
+
+      #music_controls::part(panel) {
+        position: fixed;
+        bottom: 0px;
+        height: auto;
+        overflow: unset;
+      }
+
+      #music_controls::part(body) {
+        padding: min(2.25vw, 0.85em) min(1.75vw, 0.75em);
+        overflow: unset;
+        z-index: 3;
+      }
+
+      #music_controls > div {
+        max-width: var(--content-max-width);
+        margin: 0 auto;
+      }
+
+      #music_controls nav {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #music_controls h3 {
+        width: 100%;
+        max-width: 15em;
+      }
+
+      #now_playing {
+        margin: 0 1em;
+        text-align: center;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+
+      #music_controls sl-icon {
+        font-size: 1.5em;
+        opacity: 0.6;
+        transition: opacity 0.3s ease;
+        cursor: pointer;
+      }
+
+      #music_controls sl-icon:hover {
+        opacity: 1;
+      }
+
+      #music_controls .plyr {
+        --plyr-audio-control-color: rgba(255,255,255,0.5);
+        --plyr-audio-controls-background: transparent;
+      }
+
+      #playlists:empty ~ .panel-intro {
+        opacity: 1;
+        visibility: visible;
+        z-index: 1;
       }
 
       @keyframes fadeIn {
@@ -364,8 +393,8 @@ export class PageHome extends LitElement {
 
   addTracks(tracks){
     const iterable = Array.isArray(tracks) ? tracks : [tracks];
-    this.tracks.push(...iterable);
     for (let track of iterable) {
+      this.tracks[track.id] = track;
       const artist = track.trackData?.artist?.trim() || 'Unknown';
       const artistBucket = this.tracksByArtist[artist] || (this.tracksByArtist[artist] = []);
       artistBucket.push(track);
@@ -377,7 +406,7 @@ export class PageHome extends LitElement {
           this.tracksByPlaylist[playlist] = playlist;
         }
       }
-    }
+    };
     this.requestUpdate();
   }
 
@@ -505,7 +534,21 @@ export class PageHome extends LitElement {
     this.audioElement.src = audio.audioUrl;
     this.audioElement.setAttribute('type', audio.dataFormat);
     this.musicPlayer.play();
+    this.track = track;
     this.openMusicPlayer();
+  }
+
+  playNextSong(){
+    const index = Number(this.renderRoot.querySelector(`[by-artist-id="${this?.track?.id}"]`)?.getAttribute('by-artist-index'));
+    const next = this.renderRoot.querySelector(`[by-artist-index="${index + 1}"]`)?.getAttribute('by-artist-id');
+    if (next) this.playAudioForTrack(this.tracks[next]);
+  }
+
+  playPreviousSong(){
+    const index = Number(this.renderRoot.querySelector(`[by-artist-id="${this?.track?.id}"]`)?.getAttribute('by-artist-index'));
+    if (!index || index == 0) return;
+    const previous = this.renderRoot.querySelector(`[by-artist-index="${index - 1}"]`)?.getAttribute('by-artist-id');
+    if (previous) this.playAudioForTrack(this.tracks[previous]);
   }
 
   openSongModal(){
@@ -524,26 +567,28 @@ export class PageHome extends LitElement {
   async submitSongModal(){
     await datastore.ready;
     const uploader = this.renderRoot.querySelector('#add_song_modal vaadin-upload')
-    console.log(uploader.files)
     try {
-      for (let file of uploader.files) {
+      await Promise.all(uploader.files.map(async file => {
         const metadata = await musicParser.parseBlob(file);
-        console.log(metadata);
         metadata.common.filename = file.name.replace(/\..+$/, '')
-        const track = await datastore.createTrack(metadata.common);
-        console.log('track: ', track)
-        const audio = await datastore.saveAudioForTrack(file, file.type, track.id);
-        console.log('audio: ', audio)
-        this.addTracks(track);
-      }
+        return new Promise(async resolve => {
+          const track = await datastore.createTrack(metadata.common);
+          await datastore.saveAudioForTrack(file, file.type, track.id);
+          this.addTracks(track);
+          console.log(track);
+          resolve();
+        });
+      }));
+      this.closeSongModal();
     }
     catch(e){
       console.log(e);
+      this.closeSongModal();
     }
-    this.closeSongModal();
   }
 
   render() {
+    let byArtistIndex = 0;
     return html`
 
       <sl-tab-group id="page_tabs">
@@ -561,18 +606,16 @@ export class PageHome extends LitElement {
           <section id="song_list">${Object.keys(this.tracksByArtist).sort().map(artist => {
             return html`
               <header>${artist}</header>
-              <ul>
                 ${repeat(
                   this.tracksByArtist[artist].sort(),
                   async track => track.id,
                   track => html`
-                    <li @click="${e => this.playAudioForTrack(track)}">
+                    <div by-artist-id="${track.id}" by-artist-index="${byArtistIndex++}" @click="${e => this.playAudioForTrack(track)}">
                       <sl-icon name="music-note-beamed"></sl-icon>
                       <span>${track.trackData.title || track.trackData.filename}<span>
-                    </li>
+                    </div>
                   `
                 )}
-              </ul>
             `
           })}</section>
 
@@ -595,6 +638,7 @@ export class PageHome extends LitElement {
         </sl-tab-panel>
 
         <sl-tab-panel name="playlists">
+          <ul id="playlists"></ul>
           <div class="panel-intro">
             <sl-icon name="music-note-list"></sl-icon>
             <p>You don't have any playlists, create your first one now.</p>
@@ -610,8 +654,14 @@ export class PageHome extends LitElement {
       <canvas id="visualizer_canvas"></canvas>
 
       <sl-drawer id="music_controls" placement="bottom" class="drawer-placement-bottom drawer-contained" no-header contained>
-        <h3 id="now_playing"></h3>
-        <audio id="music_player" controls></audio>
+        <div>
+          <nav>
+            <sl-icon name="caret-left" @click="${e => this.playPreviousSong()}"></sl-icon>
+            <h3 id="now_playing"></h3>
+            <sl-icon name="caret-right" @click="${e => this.playNextSong()}"></sl-icon>
+          </nav>
+          <audio id="music_player" controls></audio>
+        </div>
       </sl-drawer>
 
       <sl-dialog id="create_playlist_modal" label="Add Playlists" class="dialog-overview">
