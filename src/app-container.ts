@@ -21,22 +21,10 @@ import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
 import '@shoelace-style/shoelace/dist/components/alert/alert.js';
 
 import { Web5 } from '@tbd54566975/web5';
-const web5 = globalThis.web5 = new Web5();
-const userDID = localStorage.userDID ? JSON.parse(localStorage.userDID) : await web5.did.create('ion');
+const { web5, did: userDID } = await Web5.connect();
       localStorage.userDID = JSON.stringify(userDID);
 
 console.log(userDID);
-
-// Set Managed DID as running in browser memory and for which keys are available to sign messages.
-web5.did.manager.set(userDID.id, {
-  connected: true,
-  endpoint: 'app://dwn',
-  keys: {
-    '#dwn': {
-      'keyPair': userDID.keys.find(key => key.id === 'dwn').keyPair
-    }
-  }
-});
 
 import { Datastore } from './utils/datastore.js';
 const datastore = globalThis.datastore = new Datastore({

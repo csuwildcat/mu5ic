@@ -530,6 +530,7 @@ export class PageHome extends LitElement {
 
   async playAudioForTrack(track){
     const audio = await datastore.getAudioForTrack(track.id);
+    console.log(audio);
     this.renderRoot.querySelector('#now_playing').textContent = track.trackData.filename;
     this.audioElement.src = audio.audioUrl;
     this.audioElement.setAttribute('type', audio.dataFormat);

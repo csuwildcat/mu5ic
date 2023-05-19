@@ -8,12 +8,12 @@ class Datastore {
     this.dwn = options.web5.dwn;
     this.ready = new Promise(resolve => {
       this.getProtocol().then(async response => {
-        if (response.entries.length) {
+        if (response.protocols.length) {
           console.log('existing');
           resolve();
         }
         else {
-          console.log('new')
+          console.log('new');
           this.setProtocol().then(z => resolve());
         }
       })
@@ -26,8 +26,7 @@ class Datastore {
   playlistSchema = 'music://playlist';
 
   getProtocol(){
-    return this.dwn.protocols.query(this.did.id, {
-      author: this.did.id,
+    return this.dwn.protocols.query({
       message: {
         filter: {
           protocol: this.protocolUri
@@ -37,12 +36,11 @@ class Datastore {
   }
 
   setProtocol(){
-    return this.dwn.protocols.configure(this.did.id, {
-      author: this.did.id,
+    return this.dwn.protocols.configure({
       message: {
-        protocol: this.protocolUri,
         definition: {
-          labels: {
+          protocol: this.protocolUri,
+          types: {
             "audio": {
               "schema": this.audioSchema
             },
@@ -53,12 +51,10 @@ class Datastore {
               "schema": this.playlistSchema
             }
           },
-          records: {
+          structure: {
             playlist: {},
             track: {
-              records: {
-                audio: {}
-              }
+              audio: {}
             }
           }
         }
@@ -67,8 +63,7 @@ class Datastore {
   }
 
   getPlaylist(playlistId){
-    return this.dwn.records.read(this.did.id, {
-      author: this.did.id,
+    return this.dwn.records.read({
       message: {
         protocol: this.protocolUri,
         recordId: playlistId
@@ -77,8 +72,7 @@ class Datastore {
   }
 
   getPlaylists(){
-    return this.dwn.records.query(this.did.id, {
-      author: this.did.id,
+    return this.dwn.records.query({
       message: {
         filter: {
           protocol: this.protocolUri,
@@ -106,11 +100,11 @@ class Datastore {
   }
 
   createPlaylist(playlistJson){
-    return this.dwn.records.create(this.did.id, {
-      author: this.did.id,
+    return this.dwn.records.create({
       data: playlistJson,
       message: {
         protocol: this.protocolUri,
+        protocolPath: 'playlist',
         schema: this.playlistSchema,
         dataFormat: 'application/json'
       }
@@ -122,8 +116,7 @@ class Datastore {
   }
 
   getTrack(trackId){
-    return this.dwn.records.read(this.did.id, {
-      author: this.did.id,
+    return this.dwn.records.read({
       message: {
         recordId: trackId
       }
@@ -131,8 +124,7 @@ class Datastore {
   }
 
   async getTracks(){
-    const response = await this.dwn.records.query(this.did.id, {
-      author: this.did.id,
+    const { records } = await this.dwn.records.query({
       message: {
         filter: {
           protocol: this.protocolUri,
@@ -140,7 +132,7 @@ class Datastore {
         }
       }
     });
-    return Promise.all(response.entries.map(async entry => {
+    return Promise.all(records.map(async entry => {
       const json = await entry.data.json()
       entry.trackData = json;
       return entry;
@@ -148,17 +140,17 @@ class Datastore {
   }
 
   async createTrack(trackJson){
-    const response = await this.dwn.records.create(this.did.id, {
-      author: this.did.id,
+    const { record } = await this.dwn.records.create({
       data: trackJson,
       message: {
         protocol: this.protocolUri,
+        protocolPath: 'track',
         schema: this.trackSchema,
         dataFormat: 'application/json'
       }
     });
-    response.record.trackData = await response.record.data.json();
-    return response.record;
+    record.trackData = await record.data.json();
+    return record;
   }
 
   async modifyTrack(){
@@ -166,8 +158,7 @@ class Datastore {
   }
 
   async getAudioForTrack(trackId){
-    const results = await this.dwn.records.query(this.did.id, {
-      author: this.did.id,
+    const { records } = await this.dwn.records.query({
       message: {
         filter: {
           protocol: this.protocolUri,
@@ -175,7 +166,7 @@ class Datastore {
         }
       }
     });
-    const record = results.entries[0];
+    const record = records[0];
     if (!record) return;
     const stream = toWebStream(await record.data.stream())
     const blob = await (new Response(stream).blob({ type: record.dataFormat }));
@@ -184,13 +175,13 @@ class Datastore {
   }
 
   async saveAudioForTrack(file, format, trackId){
-    return this.dwn.records.create(this.did.id, {
-      author: this.did.id,
-      data: new Uint8Array(await file.arrayBuffer()), // rip this jank out when we get streams going again
+    return this.dwn.records.create({
+      data: file,
       message: {
         parentId: trackId,
         contextId: trackId,
         protocol: this.protocolUri,
+        protocolPath: 'track/audio',
         schema: this.audioSchema,
         dataFormat: format
       }

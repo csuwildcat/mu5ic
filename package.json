@@ -18,7 +18,7 @@
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@lit-labs/router": "0.1.1",
     "@shoelace-style/shoelace": "2.3.0",
-    "@tbd54566975/web5": "0.6.0",
+    "@tbd54566975/web5": "0.7.2",
     "@vaadin/router": "1.7.5",
     "@vaadin/select": "^24.0.2",
     "@vaadin/upload": "^24.0.2",
